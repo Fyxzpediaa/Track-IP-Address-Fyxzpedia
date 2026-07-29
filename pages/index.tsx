@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Head from 'next/head';
 
 /* ============================================================
-   PARTICLE BACKGROUND - ANIMASI PARTIKEL CYBERPUNK
+   CANVAS PARTICLE SYSTEM - PROFESSIONAL BACKGROUND
    ============================================================ */
-const ParticleBackground = () => {
+const ParticleSystem = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -13,86 +14,92 @@ const ParticleBackground = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationFrameId: number;
-    let particles: Array<{
-      x: number; y: number; vx: number; vy: number; 
-      size: number; opacity: number; hue: number; life: number;
+    let animationId: number;
+    const particles: Array<{
+      x: number; y: number; ox: number; oy: number;
+      size: number; speed: number; opacity: number;
+      angle: number; color: string;
     }> = [];
+
+    const colors = [
+      'rgba(6, 182, 212, OPACITY)',
+      'rgba(59, 130, 246, OPACITY)',
+      'rgba(139, 92, 246, OPACITY)',
+      'rgba(16, 185, 129, OPACITY)',
+    ];
 
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
+    
     resize();
     window.addEventListener('resize', resize);
-
-    const createParticle = () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      size: Math.random() * 2 + 0.5,
-      opacity: Math.random() * 0.6 + 0.2,
-      hue: Math.random() * 60 + 185,
-      life: Math.random() * 300 + 100,
+    window.addEventListener('mousemove', (e) => {
+      mouseRef.current = { x: e.clientX, y: e.clientY };
     });
 
-    for (let i = 0; i < 60; i++) {
-      particles.push(createParticle());
+    for (let i = 0; i < 100; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        ox: Math.random() * canvas.width,
+        oy: Math.random() * canvas.height,
+        size: Math.random() * 2.5 + 0.5,
+        speed: Math.random() * 0.3 + 0.1,
+        opacity: Math.random() * 0.5 + 0.1,
+        angle: Math.random() * Math.PI * 2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
     }
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      particles.forEach((p, i) => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life--;
+      particles.forEach((p) => {
+        p.angle += p.speed * 0.01;
+        p.x = p.ox + Math.cos(p.angle) * 40;
+        p.y = p.oy + Math.sin(p.angle) * 40;
 
-        if (p.life <= 0 || p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
-          particles[i] = createParticle();
-          return;
+        const mx = mouseRef.current.x;
+        const my = mouseRef.current.y;
+        const dx = p.x - mx;
+        const dy = p.y - my;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < 200) {
+          p.x += dx * 0.005;
+          p.y += dy * 0.005;
         }
 
-        // Glow effect
-        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
-        gradient.addColorStop(0, `hsla(${p.hue}, 90%, 65%, ${p.opacity})`);
-        gradient.addColorStop(1, `hsla(${p.hue}, 90%, 65%, 0)`);
-        
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-
-        // Core
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${p.hue}, 100%, 75%, ${p.opacity + 0.2})`;
+        ctx.fillStyle = p.color.replace('OPACITY', String(p.opacity));
         ctx.fill();
 
-        // Connections
         particles.forEach((p2, j) => {
-          if (i >= j) return;
-          const dx = p.x - p2.x;
-          const dy = p.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 150) {
+          const pdx = p.x - p2.x;
+          const pdy = p.y - p2.y;
+          const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+          
+          if (pdist < 120) {
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `hsla(${p.hue}, 80%, 60%, ${0.04 * (1 - dist / 150)})`;
+            ctx.strokeStyle = `rgba(100, 150, 255, ${0.04 * (1 - pdist / 120)})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
         });
       });
       
-      animationFrameId = requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
     };
+    
     animate();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      cancelAnimationFrame(animationId);
       window.removeEventListener('resize', resize);
     };
   }, []);
@@ -101,24 +108,218 @@ const ParticleBackground = () => {
 };
 
 /* ============================================================
-   DASHBOARD OUTPUT - TAMPILAN VISUAL KEREN DENGAN MAPS LINK
+   ICON COMPONENTS - SVG PROFESSIONAL
+   ============================================================ */
+const Icons = {
+  Search: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="m21 21-4.3-4.3"/>
+    </svg>
+  ),
+  Network: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.055 11H5a2 2 0 0 1 2 2v1a2 2 0 0 0 2 2 2 2 0 0 1 2 2v2.945"/>
+      <path d="M8 3.935V5.5A2.5 2.5 0 0 0 10.5 8h.5a2 2 0 0 1 2 2 2 2 0 1 0 4 0 2 2 0 0 1 2-2h1.064"/>
+      <path d="M15 20.488V18a2 2 0 0 1 2-2h3.064"/>
+    </svg>
+  ),
+  Key: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 7a2 2 0 0 1 2 2m4 0a6 6 0 0 1-7.743 5.743L11 17H9v2H7v2H4a1 1 0 0 1-1-1v-2.586a1 1 0 0 1 .293-.707l5.964-5.964A6 6 0 1 1 21 9z"/>
+    </svg>
+  ),
+  Zap: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </svg>
+  ),
+  Terminal: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="4 17 10 11 4 5"/>
+      <line x1="12" y1="19" x2="20" y2="19"/>
+    </svg>
+  ),
+  Copy: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+    </svg>
+  ),
+  Check: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  ),
+  Map: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m9 18 6-6-6-6"/>
+    </svg>
+  ),
+  Globe: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+      <path d="M2 12h20"/>
+    </svg>
+  ),
+  ArrowRight: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14"/>
+      <path d="m12 5 7 7-7 7"/>
+    </svg>
+  ),
+  Shield: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  ),
+  Clock: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+};
+
+/* ============================================================
+   TOAST NOTIFICATION SYSTEM
+   ============================================================ */
+const Toast = ({ message, show }: { message: string; show: boolean }) => (
+  <div className={`fixed bottom-6 right-6 z-[100] transition-all duration-500 ${
+    show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+  }`}>
+    <div className="flex items-center gap-3 bg-[#0f1729] border border-emerald-500/30 rounded-2xl px-5 py-3.5 shadow-2xl shadow-emerald-500/10 backdrop-blur-xl">
+      <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+        <Icons.Check />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-emerald-400">Copied to clipboard</p>
+        <p className="text-xs text-gray-500 mt-0.5 font-mono truncate max-w-[200px]">{message}</p>
+      </div>
+    </div>
+  </div>
+);
+
+/* ============================================================
+   COPY BUTTON COMPONENT
+   ============================================================ */
+const CopyButton = ({ text, label }: { text: string; label?: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-300 ${
+        copied
+          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+          : 'bg-white/[0.04] text-gray-400 border border-white/[0.08] hover:bg-white/[0.08] hover:text-gray-200 hover:border-white/[0.15]'
+      }`}
+    >
+      {copied ? <Icons.Check /> : <Icons.Copy />}
+      {copied ? 'Copied' : label || 'Copy'}
+    </button>
+  );
+};
+
+/* ============================================================
+   CODE BLOCK COMPONENT
+   ============================================================ */
+const CodeBlock = ({ code, language = 'bash', label }: { code: string; language?: string; label?: string }) => (
+  <div className="relative group bg-[#0a0d15] border border-white/[0.06] rounded-2xl overflow-hidden shadow-xl">
+    <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.04] bg-[#0d1020]/50">
+      <div className="flex items-center gap-3">
+        <div className="flex gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
+        </div>
+        {label && (
+          <span className="text-xs text-gray-600 font-mono">{label}</span>
+        )}
+      </div>
+      <CopyButton text={code} />
+    </div>
+    <pre className="p-5 overflow-x-auto">
+      <code className="text-sm font-mono text-gray-300 leading-relaxed">{code}</code>
+    </pre>
+  </div>
+);
+
+/* ============================================================
+   TUTORIAL STEP COMPONENT
+   ============================================================ */
+const TutorialStep = ({ number, title, description, code, curlExample }: {
+  number: number;
+  title: string;
+  description: string;
+  code?: string;
+  curlExample?: string;
+}) => (
+  <div className="group relative">
+    <div className="absolute -left-3 top-0 bottom-0 w-px bg-gradient-to-b from-cyan-500/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    
+    <div className="flex gap-6">
+      <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold text-sm shadow-lg shadow-cyan-500/5">
+        {number}
+      </div>
+      
+      <div className="flex-1 space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <p className="text-sm text-gray-500 mt-1 leading-relaxed">{description}</p>
+        </div>
+        
+        {code && <CodeBlock code={code} label="javascript" />}
+        
+        {curlExample && (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-600 uppercase tracking-wider font-medium">cURL Example</p>
+            <CodeBlock code={curlExample} label="terminal" />
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+/* ============================================================
+   DASHBOARD OUTPUT - TAMPILAN KARTU INFORMASI
    ============================================================ */
 const DashboardOutput = ({ data, isLoading }: { data: any; isLoading: boolean }) => {
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const mapsUrl = data?.lat && data?.lon 
     ? `https://www.google.com/maps?q=${data.lat},${data.lon}`
     : '#';
 
   if (isLoading) {
     return (
-      <div className="bg-[#0a0e17] border border-white/[0.06] rounded-2xl p-8 shadow-2xl shadow-black/50">
-        <div className="text-center space-y-6 animate-pulse">
-          <div className="w-20 h-20 mx-auto rounded-full border-4 border-cyan-500/20 border-t-cyan-500 animate-spin" />
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-800 rounded w-3/4 mx-auto" />
-            <div className="h-3 bg-gray-800 rounded w-1/2 mx-auto" />
+      <div className="bg-[#0a0f18] border border-white/[0.06] rounded-3xl p-10 shadow-2xl shadow-black/50">
+        <div className="flex flex-col items-center justify-center space-y-6">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-2 border-cyan-500/20 border-t-cyan-500 animate-spin" />
+            <div className="absolute inset-0 rounded-full border-2 border-blue-500/10 border-b-blue-500 animate-spin animation-delay-500" style={{ animationDuration: '1.5s' }} />
           </div>
-          <p className="text-cyan-400/60 font-mono text-sm">Analyzing network packets...</p>
+          <div className="text-center space-y-2">
+            <p className="text-cyan-400 font-medium text-sm">Processing Request</p>
+            <p className="text-gray-600 text-xs font-mono">Querying network intelligence database...</p>
+          </div>
         </div>
       </div>
     );
@@ -126,189 +327,117 @@ const DashboardOutput = ({ data, isLoading }: { data: any; isLoading: boolean })
 
   if (!data) return null;
 
-  const infoCards = [
-    { 
-      id: 'ip', 
-      icon: '🌐', 
-      label: 'IP Address', 
-      value: data.ip || 'N/A',
-      color: 'from-cyan-500/10 to-blue-500/10 border-cyan-500/20',
-      textColor: 'text-cyan-400',
-      bgGlow: 'shadow-cyan-500/10'
-    },
-    { 
-      id: 'location', 
-      icon: '📍', 
-      label: 'Location', 
-      value: `${data.city || 'N/A'}, ${data.region || 'N/A'}`,
-      sub: data.country || 'N/A',
-      color: 'from-purple-500/10 to-pink-500/10 border-purple-500/20',
-      textColor: 'text-purple-400',
-      bgGlow: 'shadow-purple-500/10'
-    },
-    { 
-      id: 'isp', 
-      icon: '🔌', 
-      label: 'ISP Provider', 
-      value: data.isp || 'N/A',
-      color: 'from-emerald-500/10 to-teal-500/10 border-emerald-500/20',
-      textColor: 'text-emerald-400',
-      bgGlow: 'shadow-emerald-500/10'
-    },
-    { 
-      id: 'as', 
-      icon: '🔢', 
-      label: 'AS Number', 
-      value: data.as || 'N/A',
-      color: 'from-orange-500/10 to-amber-500/10 border-orange-500/20',
-      textColor: 'text-orange-400',
-      bgGlow: 'shadow-orange-500/10'
-    },
-    { 
-      id: 'timezone', 
-      icon: '🕐', 
-      label: 'Timezone', 
-      value: data.timezone || 'N/A',
-      color: 'from-indigo-500/10 to-blue-500/10 border-indigo-500/20',
-      textColor: 'text-indigo-400',
-      bgGlow: 'shadow-indigo-500/10'
-    },
-    { 
-      id: 'coordinates', 
-      icon: '🎯', 
-      label: 'Coordinates', 
-      value: data.lat && data.lon ? `${data.lat}, ${data.lon}` : 'N/A',
-      color: 'from-rose-500/10 to-red-500/10 border-rose-500/20',
-      textColor: 'text-rose-400',
-      bgGlow: 'shadow-rose-500/10'
-    },
+  const cards = [
+    { key: 'ip', label: 'IP Address', value: data.ip, icon: <Icons.Network />, color: 'cyan' },
+    { key: 'location', label: 'Location', value: `${data.city}, ${data.region}`, sub: data.country, icon: <Icons.Globe />, color: 'purple' },
+    { key: 'isp', label: 'ISP Provider', value: data.isp, icon: <Icons.Shield />, color: 'emerald' },
+    { key: 'as', label: 'AS Number', value: data.as, icon: <Icons.Key />, color: 'amber' },
+    { key: 'timezone', label: 'Timezone', value: data.timezone, icon: <Icons.Clock />, color: 'indigo' },
+    { key: 'coordinates', label: 'Coordinates', value: `${data.lat}, ${data.lon}`, icon: <Icons.Map />, color: 'rose' },
   ];
+
+  const colorMap: Record<string, string> = {
+    cyan: 'border-cyan-500/20 bg-cyan-500/5 text-cyan-400',
+    purple: 'border-purple-500/20 bg-purple-500/5 text-purple-400',
+    emerald: 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400',
+    amber: 'border-amber-500/20 bg-amber-500/5 text-amber-400',
+    indigo: 'border-indigo-500/20 bg-indigo-500/5 text-indigo-400',
+    rose: 'border-rose-500/20 bg-rose-500/5 text-rose-400',
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header Status */}
-      <div className="flex items-center justify-between bg-[#0a0e17] border border-white/[0.06] rounded-2xl px-6 py-4">
+      {/* Status Bar */}
+      <div className="flex items-center justify-between bg-[#0a0f18] border border-white/[0.06] rounded-2xl px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-lg shadow-green-500/50" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse delay-75 shadow-lg shadow-green-400/50" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-300 animate-pulse delay-150 shadow-lg shadow-green-300/50" />
+          <div className="flex gap-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ animationDelay: '100ms' }} />
           </div>
-          <span className="text-sm font-semibold text-green-400">TRACE SUCCESSFUL</span>
-          <span className="text-xs text-gray-600 font-mono">• {new Date().toLocaleTimeString()}</span>
+          <span className="text-sm font-semibold text-emerald-400">Trace Successful</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Response Time:</span>
-          <span className="text-xs font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md">
-            {Math.floor(Math.random() * 100 + 30)}ms
+        <div className="flex items-center gap-3 text-xs text-gray-600">
+          <span className="flex items-center gap-1.5">
+            <Icons.Clock />
+            {new Date().toLocaleTimeString()}
           </span>
+          <span className="w-px h-4 bg-white/[0.06]" />
+          <span className="font-mono text-cyan-400">{Math.floor(Math.random() * 80 + 20)}ms</span>
         </div>
       </div>
 
       {/* Info Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {infoCards.map((card) => (
+        {cards.map((card) => (
           <div
-            key={card.id}
-            onMouseEnter={() => setHoveredCard(card.id)}
-            onMouseLeave={() => setHoveredCard(null)}
-            className={`
-              relative bg-[#0a0e17] border rounded-2xl p-5
-              transition-all duration-500 cursor-default
-              ${card.color}
-              ${hoveredCard === card.id ? `scale-[1.03] shadow-2xl ${card.bgGlow} -translate-y-1` : 'shadow-lg'}
-            `}
+            key={card.key}
+            className="group/card bg-[#0a0f18] border border-white/[0.05] rounded-2xl p-5 hover:bg-[#0d1220] transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/30 cursor-default"
           >
-            <div className="flex items-start justify-between mb-3">
-              <span className="text-2xl">{card.icon}</span>
-              <span className={`text-xs font-mono ${card.textColor} opacity-60`}>
-                {card.id.toUpperCase()}
-              </span>
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-10 h-10 rounded-xl border ${colorMap[card.color]} flex items-center justify-center`}>
+                {card.icon}
+              </div>
+              <CopyButton text={card.value} />
             </div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{card.label}</p>
-            <p className={`text-lg font-bold ${card.textColor} break-all`}>{card.value}</p>
+            <p className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1">{card.label}</p>
+            <p className="text-base font-semibold text-gray-200 group-hover/card:text-white transition-colors break-all">{card.value}</p>
             {card.sub && (
-              <p className="text-sm text-gray-500 mt-1">{card.sub}</p>
+              <p className="text-sm text-gray-600 mt-1">{card.sub}</p>
             )}
-            
-            {/* Hover glow effect */}
-            <div className={`absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 pointer-events-none ${
-              hoveredCard === card.id ? 'opacity-100' : ''
-            }`}
-            style={{
-              background: `radial-gradient(circle at 50% 0%, ${card.textColor.replace('text-', '')}15, transparent 70%)`
-            }}
-            />
           </div>
         ))}
       </div>
 
-      {/* Google Maps Link - BIG CTA */}
+      {/* Google Maps CTA */}
       <a
         href={mapsUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="block group relative overflow-hidden bg-gradient-to-r from-[#0a0e17] to-[#0d1117] border-2 border-cyan-500/30 rounded-2xl p-6 hover:border-cyan-400/60 transition-all duration-500 shadow-2xl shadow-cyan-500/5 hover:shadow-cyan-500/20"
+        className="group/maps block relative overflow-hidden bg-gradient-to-r from-[#0a0f18] to-[#0d1321] border-2 border-cyan-500/20 rounded-2xl p-6 hover:border-cyan-400/50 transition-all duration-500 shadow-xl hover:shadow-cyan-500/10"
       >
-        {/* Animated border glow */}
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/5 to-blue-500/0 group-hover:via-cyan-500/10 transition-all duration-700" />
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/3 to-blue-500/0 opacity-0 group-hover/maps:opacity-100 transition-opacity duration-700" />
         
         <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500/20 to-yellow-500/20 border border-red-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+          <div className="flex items-center gap-5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500/10 to-yellow-500/10 border border-red-500/20 flex items-center justify-center group-hover/maps:scale-110 transition-transform duration-500">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                 <path fill="#EA4335" d="M12 0C7.31 0 3.46 3.85 3.46 8.54 3.46 13.23 12 24 12 24s8.54-10.77 8.54-15.46C20.54 3.85 16.69 0 12 0z"/>
                 <circle cx="12" cy="8.5" r="3" fill="#4285F4"/>
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">
-                Open in Google Maps
-              </h3>
-              <p className="text-sm text-gray-400 font-mono">
-                {data.lat || '??'}, {data.lon || '??'}
-              </p>
+              <h4 className="text-base font-semibold text-white group-hover/maps:text-cyan-300 transition-colors">View Location on Google Maps</h4>
+              <p className="text-sm text-gray-500 font-mono mt-0.5">{data.lat}, {data.lon}</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline text-sm text-gray-500 group-hover:text-cyan-400 transition-colors">
-              View Location
-            </span>
-            <svg className="w-6 h-6 text-gray-500 group-hover:text-cyan-400 transform group-hover:translate-x-1 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
+          <div className="flex items-center gap-2 text-gray-500 group-hover/maps:text-cyan-400 transition-colors">
+            <span className="hidden sm:inline text-sm">Open Maps</span>
+            <Icons.ArrowRight />
           </div>
-        </div>
-        
-        {/* Pin drop animation */}
-        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          <span className="text-2xl animate-bounce">📍</span>
         </div>
       </a>
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <button
-          onClick={() => window.open(mapsUrl, '_blank')}
-          className="flex items-center gap-2 px-5 py-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-sm text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300"
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-sm text-cyan-400 hover:bg-cyan-500/20 transition-all duration-300"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-          Google Maps
-        </button>
+          <Icons.Map />
+          Open in Google Maps
+        </a>
         <button
           onClick={() => {
-            const text = `📍 IP: ${data.ip}\n🏙️ City: ${data.city}\n🌍 Country: ${data.country}\n📡 ISP: ${data.isp}\n🗺️ Maps: ${mapsUrl}`;
+            const text = `IP: ${data.ip}\nLocation: ${data.city}, ${data.region}, ${data.country}\nISP: ${data.isp}\nAS: ${data.as}\nCoordinates: ${data.lat}, ${data.lon}\nMaps: ${mapsUrl}`;
             navigator.clipboard.writeText(text);
           }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/[0.06] transition-all duration-300"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/[0.06] transition-all duration-300"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-          </svg>
-          Copy Info
+          <Icons.Copy />
+          Copy All Info
         </button>
       </div>
     </div>
@@ -316,18 +445,13 @@ const DashboardOutput = ({ data, isLoading }: { data: any; isLoading: boolean })
 };
 
 /* ============================================================
-   TERMINAL OUTPUT - TAMPILAN TERMINAL HACKER
+   TERMINAL OUTPUT
    ============================================================ */
-const TerminalOutput = ({ output, isLoading, isError, data }: { 
-  output: string; 
-  isLoading: boolean; 
-  isError: boolean;
-  data: any;
+const TerminalOutput = ({ output, isLoading, isError, data }: {
+  output: string; isLoading: boolean; isError: boolean; data: any;
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
-  const mapsUrl = data?.lat && data?.lon 
-    ? `https://www.google.com/maps?q=${data.lat},${data.lon}`
-    : null;
+  const mapsUrl = data?.lat && data?.lon ? `https://www.google.com/maps?q=${data.lat},${data.lon}` : null;
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -336,76 +460,60 @@ const TerminalOutput = ({ output, isLoading, isError, data }: {
   }, [output, isLoading]);
 
   return (
-    <div className="bg-[#0a0a0a] border border-gray-800/50 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 font-mono">
-      {/* Terminal Title Bar */}
-      <div className="bg-[#1a1a1a] px-4 py-2.5 flex items-center justify-between border-b border-gray-800">
-        <div className="flex items-center gap-2">
+    <div className="bg-[#050508] border border-gray-800/30 rounded-2xl overflow-hidden shadow-2xl shadow-black/50 font-mono">
+      <div className="bg-[#0f0f14] px-5 py-3 flex items-center justify-between border-b border-gray-800/30">
+        <div className="flex items-center gap-3">
           <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-lg shadow-red-500/30" />
-            <div className="w-3 h-3 rounded-full bg-[#febc2e] shadow-lg shadow-yellow-500/30" />
-            <div className="w-3 h-3 rounded-full bg-[#28c840] shadow-lg shadow-green-500/30" />
+            <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+            <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+            <div className="w-3 h-3 rounded-full bg-[#28c840]" />
           </div>
-          <span className="text-xs text-gray-600 ml-3">
-            root@ip-tracer:~/
-          </span>
+          <span className="text-xs text-gray-700">root@ip-tracer — bash</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-gray-700">
-            {isLoading ? 'EXECUTING...' : isError ? 'ERROR' : data ? 'SUCCESS' : 'IDLE'}
-          </span>
-          <span className="text-[10px] text-gray-600">
-            bash 5.1
+          <CopyButton text={output} />
+          <span className={`text-[10px] font-medium ${
+            isLoading ? 'text-yellow-500' : isError ? 'text-red-500' : data ? 'text-emerald-500' : 'text-gray-700'
+          }`}>
+            {isLoading ? 'EXECUTING' : isError ? 'ERROR' : data ? 'SUCCESS' : 'IDLE'}
           </span>
         </div>
       </div>
 
-      {/* Terminal Content */}
-      <div 
+      <div
         ref={terminalRef}
-        className="p-5 min-h-[350px] max-h-[550px] overflow-y-auto custom-scrollbar"
-        style={{
-          background: 'linear-gradient(to bottom, #0a0a0a 0%, #050505 100%)',
-        }}
+        className="p-6 min-h-[350px] max-h-[550px] overflow-y-auto custom-scrollbar"
+        style={{ background: 'linear-gradient(180deg, #050508 0%, #030305 100%)' }}
       >
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-green-500">$</span>
-              <span className="text-gray-400">./trace-execute --target </span>
-              <span className="text-cyan-400 animate-pulse">████████████</span>
+              <span className="text-emerald-500">$</span>
+              <span className="text-gray-400">./ip-tracer --execute</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-500">></span>
-              <span className="text-gray-600 animate-pulse">Initializing network scan...</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-500">></span>
-              <span className="text-gray-600 animate-pulse delay-100">Resolving hostname...</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-500">></span>
-              <span className="text-gray-600 animate-pulse delay-200">Querying geolocation database...</span>
-            </div>
-            <div className="flex items-center gap-2 mt-4">
-              <span className="text-yellow-500">[wait]</span>
-              <span className="text-yellow-400/60 animate-pulse">█</span>
+            <div className="space-y-2 pl-4">
+              {['Initializing network scan...', 'Resolving target hostname...', 'Querying geolocation database...', 'Fetching ISP records...'].map((line, i) => (
+                <div key={i} className="flex items-center gap-2 text-gray-600">
+                  <span className="text-emerald-600">|</span>
+                  <span className="animate-pulse" style={{ animationDelay: `${i * 150}ms` }}>{line}</span>
+                </div>
+              ))}
             </div>
           </div>
         ) : (
           <pre className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${
-            isError ? 'text-red-400' : 'text-green-400'
+            isError ? 'text-red-400' : 'text-emerald-400'
           }`}>
             <code>{output || '$ _'}</code>
           </pre>
         )}
 
-        {/* Maps link di terminal */}
         {!isLoading && mapsUrl && (
-          <div className="mt-4 pt-4 border-t border-gray-800/50">
+          <div className="mt-5 pt-4 border-t border-gray-800/30">
             <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="text-green-500">$</span>
+              <span className="text-emerald-500">$</span>
               <span>open maps:</span>
-              <a 
+              <a
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -413,63 +521,44 @@ const TerminalOutput = ({ output, isLoading, isError, data }: {
               >
                 {mapsUrl}
               </a>
-              <span className="text-yellow-500 animate-pulse ml-1">← click</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Terminal Footer */}
-      <div className="bg-[#1a1a1a]/50 px-4 py-2 border-t border-gray-800/50 flex items-center justify-between text-[10px]">
-        <div className="flex items-center gap-2 text-gray-600">
-          <span className={`w-1.5 h-1.5 rounded-full ${
-            isLoading ? 'bg-yellow-500 animate-pulse' : 
-            isError ? 'bg-red-500' : 
-            data ? 'bg-green-500 animate-pulse' : 
-            'bg-gray-700'
-          }`} />
-          <span>{isLoading ? 'processing...' : isError ? 'exit code: 1' : data ? 'exit code: 0' : 'ready'}</span>
-        </div>
-        <span className="text-gray-700">TTY: pts/0</span>
+      <div className="bg-[#0f0f14]/50 px-5 py-2.5 border-t border-gray-800/30 flex items-center justify-between text-[10px] text-gray-700">
+        <span>TTY: pts/0</span>
+        <span>{new Date().toLocaleTimeString()}</span>
       </div>
     </div>
   );
 };
 
 /* ============================================================
-   GLOW BUTTON COMPONENT
+   GLOW BUTTON
    ============================================================ */
-const GlowButton = ({ 
-  children, 
-  onClick, 
-  variant = 'cyan',
-  loading = false,
-  icon = null
-}: { 
-  children: React.ReactNode; 
-  onClick: () => void; 
-  variant?: 'cyan' | 'purple' | 'green';
+const GlowButton = ({ children, onClick, variant = 'cyan', loading = false, icon }: {
+  children: React.ReactNode;
+  onClick: () => void;
+  variant?: 'cyan' | 'purple' | 'emerald';
   loading?: boolean;
   icon?: React.ReactNode;
 }) => {
   const variants = {
     cyan: {
-      bg: 'from-cyan-600 via-cyan-500 to-blue-600',
-      shadow: 'shadow-[0_0_30px_rgba(6,182,212,0.4)]',
-      hoverShadow: 'hover:shadow-[0_0_50px_rgba(6,182,212,0.6)]',
-      ring: 'ring-cyan-400/20',
+      bg: 'from-cyan-600 to-blue-700',
+      shadow: 'shadow-[0_0_30px_rgba(6,182,212,0.3)]',
+      hoverShadow: 'hover:shadow-[0_0_50px_rgba(6,182,212,0.5)]',
     },
     purple: {
-      bg: 'from-purple-600 via-purple-500 to-violet-600',
-      shadow: 'shadow-[0_0_30px_rgba(147,51,234,0.4)]',
-      hoverShadow: 'hover:shadow-[0_0_50px_rgba(147,51,234,0.6)]',
-      ring: 'ring-purple-400/20',
+      bg: 'from-purple-600 to-violet-700',
+      shadow: 'shadow-[0_0_30px_rgba(139,92,246,0.3)]',
+      hoverShadow: 'hover:shadow-[0_0_50px_rgba(139,92,246,0.5)]',
     },
-    green: {
-      bg: 'from-emerald-600 via-emerald-500 to-teal-600',
-      shadow: 'shadow-[0_0_30px_rgba(16,185,129,0.4)]',
-      hoverShadow: 'hover:shadow-[0_0_50px_rgba(16,185,129,0.6)]',
-      ring: 'ring-emerald-400/20',
+    emerald: {
+      bg: 'from-emerald-600 to-teal-700',
+      shadow: 'shadow-[0_0_30px_rgba(16,185,129,0.3)]',
+      hoverShadow: 'hover:shadow-[0_0_50px_rgba(16,185,129,0.5)]',
     },
   };
 
@@ -479,31 +568,18 @@ const GlowButton = ({
     <button
       onClick={onClick}
       disabled={loading}
-      className={`
-        relative w-full font-bold py-4 px-8 rounded-2xl text-white
-        bg-gradient-to-r ${v.bg}
-        ${v.shadow} ${v.hoverShadow}
-        transition-all duration-500
-        hover:scale-[1.02] active:scale-[0.98]
-        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-        overflow-hidden group
-        ring-1 ${v.ring}
-      `}
+      className={`relative w-full font-semibold py-4 px-8 rounded-2xl text-white bg-gradient-to-r ${v.bg} ${v.shadow} ${v.hoverShadow} transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 overflow-hidden group`}
     >
-      {/* Shine effect */}
-      <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 skew-x-12" />
-      
-      {/* Top highlight */}
-      <span className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
-      <span className="relative flex items-center justify-center gap-3 text-base">
+      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 skew-x-12" />
+      <span className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <span className="relative flex items-center justify-center gap-3">
         {loading ? (
           <>
             <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <span className="animate-pulse">Executing...</span>
+            <span className="animate-pulse">Processing...</span>
           </>
         ) : (
           <>
@@ -517,33 +593,22 @@ const GlowButton = ({
 };
 
 /* ============================================================
-   STATS BADGE
+   STAT CARD
    ============================================================ */
-const StatsBadge = ({ icon, label, value, color = 'cyan' }: { 
-  icon: string; 
-  label: string; 
-  value: string;
-  color?: 'cyan' | 'purple' | 'green';
-}) => {
-  const colors = {
-    cyan: 'hover:border-cyan-500/30 hover:shadow-cyan-500/5',
-    purple: 'hover:border-purple-500/30 hover:shadow-purple-500/5',
-    green: 'hover:border-emerald-500/30 hover:shadow-emerald-500/5',
-  };
-
-  return (
-    <div className={`flex items-center gap-3 px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-xl hover:bg-white/[0.04] ${colors[color]} transition-all duration-300 group cursor-default`}>
-      <span className="text-lg group-hover:scale-110 transition-transform duration-300">{icon}</span>
-      <div>
-        <div className="text-[10px] text-gray-600 uppercase tracking-wider">{label}</div>
-        <div className="text-sm font-semibold text-gray-200 group-hover:text-white transition-colors">{value}</div>
-      </div>
+const StatCard = ({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) => (
+  <div className="flex items-center gap-4 px-5 py-4 bg-white/[0.02] border border-white/[0.04] rounded-2xl hover:bg-white/[0.04] hover:border-white/[0.08] transition-all duration-500 group cursor-default">
+    <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-gray-400 group-hover:text-cyan-400 group-hover:border-cyan-500/20 transition-all duration-500">
+      {icon}
     </div>
-  );
-};
+    <div>
+      <div className="text-xl font-bold text-gray-200 group-hover:text-white transition-colors">{value}</div>
+      <div className="text-xs text-gray-600 mt-0.5">{label}</div>
+    </div>
+  </div>
+);
 
 /* ============================================================
-   MAIN PAGE
+   MAIN APPLICATION
    ============================================================ */
 export default function Home() {
   const [ip, setIp] = useState('');
@@ -556,12 +621,19 @@ export default function Home() {
   const [activeTrace, setActiveTrace] = useState<'custom' | 'me'>('custom');
   const [outputMode, setOutputMode] = useState<'dashboard' | 'terminal'>('dashboard');
   const [scrolled, setScrolled] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '' });
+  const [activeSection, setActiveSection] = useState('tracer');
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    const handleScroll = () => setScrolled(window.scrollY > 30);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const showToast = (msg: string) => {
+    setToast({ show: true, message: msg });
+    setTimeout(() => setToast({ show: false, message: '' }), 2500);
+  };
 
   const executeTrace = useCallback(async (url: string, type: 'custom' | 'me') => {
     setIsLoading(true);
@@ -572,53 +644,41 @@ export default function Home() {
     try {
       const res = await fetch(url);
       const data = await res.json();
-
-      if (!res.ok || !data.status) {
-        throw new Error(data.message || `HTTP Error! Status: ${res.status}`);
-      }
+      if (!res.ok || !data.status) throw new Error(data.message || `HTTP ${res.status}`);
 
       setTraceData(data);
       
-      // Generate terminal output
       const mapsUrl = data.lat && data.lon ? `https://www.google.com/maps?q=${data.lat},${data.lon}` : 'N/A';
       const terminalText = `
-╔══════════════════════════════════════════════════════════╗
-║                                                          ║
-║   ██╗██████╗    ████████╗██████╗  █████╗  ██████╗███████╗
-║   ██║██╔══██╗   ╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██╔════╝
-║   ██║██████╔╝█████╗██║   ██████╔╝███████║██║     █████╗  
-║   ██║██╔═══╝ ╚════╝██║   ██╔══██╗██╔══██║██║     ██╔══╝  
-║   ██║██║           ██║   ██║  ██║██║  ██║╚██████╗███████╗
-║   ╚═╝╚═╝           ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝
-║                                                          ║
-╠══════════════════════════════════════════════════════════╣
-║                                                          ║
-║  📡  Target IP     : ${data.ip.padEnd(35)}║
-║  🏙️   City          : ${(data.city || 'N/A').padEnd(35)}║
-║  🗺️   Region        : ${(data.region || 'N/A').padEnd(35)}║
-║  🌍  Country       : ${(data.country || 'N/A').padEnd(35)}║
-║  📍  Latitude      : ${String(data.lat || 'N/A').padEnd(35)}║
-║  📍  Longitude     : ${String(data.lon || 'N/A').padEnd(35)}║
-║  🕐  Timezone      : ${(data.timezone || 'N/A').padEnd(35)}║
-║  🌐  ISP           : ${(data.isp || 'N/A').padEnd(35)}║
-║  🔢  AS Number     : ${(data.as || 'N/A').padEnd(35)}║
-║                                                          ║
-╠══════════════════════════════════════════════════════════╣
-║                                                          ║
-║  🗺️   Google Maps   : ${mapsUrl.substring(0, 42).padEnd(42)}║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
+  ██╗██████╗    ████████╗██████╗  █████╗  ██████╗███████╗
+  ██║██╔══██╗   ╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██╔════╝
+  ██║██████╔╝█████╗██║   ██████╔╝███████║██║     █████╗  
+  ██║██╔═══╝ ╚════╝██║   ██╔══██╗██╔══██║██║     ██╔══╝  
+  ██║██║           ██║   ██║  ██║██║  ██║╚██████╗███████╗
+  ╚═╝╚═╝           ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝
 
-$ Status: ✅ SUCCESS | Time: ${new Date().toLocaleTimeString()}
-$ Response: ${Math.floor(Math.random() * 80 + 20)}ms | Exit Code: 0
-$ Maps: ${mapsUrl}
-`.trim();
+  TARGET IP      : ${data.ip}
+  CITY           : ${data.city || 'N/A'}
+  REGION         : ${data.region || 'N/A'}
+  COUNTRY        : ${data.country || 'N/A'}
+  LATITUDE       : ${data.lat || 'N/A'}
+  LONGITUDE      : ${data.lon || 'N/A'}
+  TIMEZONE       : ${data.timezone || 'N/A'}
+  ISP            : ${data.isp || 'N/A'}
+  AS NUMBER      : ${data.as || 'N/A'}
+  ──────────────────────────────────────
+  GOOGLE MAPS    : ${mapsUrl}
+  ──────────────────────────────────────
+  STATUS         : SUCCESS
+  RESPONSE TIME  : ${Math.floor(Math.random() * 80 + 20)}ms
+
+  $ _`.trim();
       
       setOutput(terminalText);
     } catch (error: any) {
       setIsError(true);
       setTraceData(null);
-      setOutput(`$ ❌ ERROR: ${error.message || 'Connection failed'}\n$ Exit Code: 1\n$ Time: ${new Date().toLocaleTimeString()}`);
+      setOutput(`$ ERROR: ${error.message}\n$ EXIT CODE: 1`);
     } finally {
       setIsLoading(false);
     }
@@ -627,7 +687,7 @@ $ Maps: ${mapsUrl}
   const handleTrace = () => {
     if (!ip || !apiKey) {
       setIsError(true);
-      setOutput('$ ⚠️  WARNING: Missing required parameters\n$ Usage: IP Address and API Key are required\n$ Exit Code: 2');
+      setOutput('$ ERROR: Missing required parameters\n$ USAGE: IP Address and API Key are required');
       setTraceData(null);
       return;
     }
@@ -637,7 +697,7 @@ $ Maps: ${mapsUrl}
   const handleTraceMe = () => {
     if (!apiKeyMe) {
       setIsError(true);
-      setOutput('$ ⚠️  WARNING: API Key is required\n$ Exit Code: 2');
+      setOutput('$ ERROR: API Key is required');
       setTraceData(null);
       return;
     }
@@ -645,228 +705,177 @@ $ Maps: ${mapsUrl}
   };
 
   return (
-    <div className="min-h-screen bg-[#06080d] text-white font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#06080d] text-white font-sans relative overflow-x-hidden selection:bg-cyan-500/30">
       <Head>
-        <title>IP-Tracer Pro | Advanced Network Intelligence Platform</title>
-        <meta name="description" content="Enterprise-grade IP tracking and network intelligence platform with real-time geolocation, ISP mapping, and comprehensive analytics." />
+        <title>IP-Tracer Pro — Advanced Network Intelligence Platform</title>
+        <meta name="description" content="Enterprise-grade IP tracking and network intelligence with real-time geolocation, ISP mapping, and comprehensive analytics." />
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>" />
       </Head>
 
-      <ParticleBackground />
+      <ParticleSystem />
+      <Toast message={toast.message} show={toast.show} />
 
       {/* ==================== NAVIGATION ==================== */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled 
-          ? 'bg-[#06080d]/95 backdrop-blur-2xl border-b border-white/[0.05] shadow-2xl shadow-black/50' 
-          : 'bg-transparent'
+        scrolled ? 'bg-[#06080d]/90 backdrop-blur-2xl border-b border-white/[0.04] shadow-2xl shadow-black/50' : ''
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-18">
-            {/* Logo */}
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-xl shadow-cyan-500/30 overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <svg className="w-5 h-5 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
-                </svg>
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <Icons.Network />
               </div>
-              <div className="hidden sm:block">
-                <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                  IP-Tracer
-                </span>
-                <span className="text-[10px] text-gray-500 ml-2 font-mono uppercase tracking-[0.2em]">Pro v2.1</span>
-              </div>
+              <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent hidden sm:block">
+                IP-Tracer Pro
+              </span>
             </div>
 
-            {/* Nav Links */}
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-1 bg-white/[0.02] border border-white/[0.04] rounded-2xl p-1">
               {[
-                { label: 'Dashboard', href: '#', active: true },
-                { label: 'API Docs', href: '#docs' },
-                { label: 'Status', href: '#status' },
-                { label: 'GitHub', href: 'https://github.com' },
+                { id: 'tracer', label: 'Tracer' },
+                { id: 'docs', label: 'Documentation' },
+                { id: 'tutorial', label: 'Tutorial' },
               ].map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className={`px-4 py-2 text-sm rounded-xl transition-all duration-300 ${
-                    item.active 
-                      ? 'text-cyan-400 bg-cyan-500/10 font-medium' 
-                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveSection(item.id);
+                    document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className={`px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    activeSection === item.id
+                      ? 'bg-cyan-500/15 text-cyan-400 shadow-lg shadow-cyan-500/5'
+                      : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
                   {item.label}
-                </a>
+                </button>
               ))}
-              <div className="ml-4 flex items-center gap-2 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/20 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50" />
-                <span className="text-[10px] text-emerald-400 font-mono uppercase tracking-wider">Online</span>
-              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/15 rounded-full text-[11px] text-emerald-400 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                API v2.1
+              </span>
             </div>
           </div>
         </div>
       </nav>
 
       {/* ==================== MAIN CONTENT ==================== */}
-      <main className="relative z-10 pt-28 pb-24">
+      <main className="relative z-10 pt-28 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          {/* ==================== HERO SECTION ==================== */}
-          <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2.5 px-5 py-2 bg-cyan-500/[0.07] border border-cyan-500/20 rounded-full text-xs text-cyan-400 mb-8 font-mono tracking-wider">
+          {/* ==================== HERO ==================== */}
+          <div className="text-center mb-16" id="tracer">
+            <div className="inline-flex items-center gap-2.5 px-5 py-2 bg-cyan-500/[0.05] border border-cyan-500/15 rounded-full text-[12px] text-cyan-400 mb-8 font-medium tracking-wider">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
               </span>
-              NETWORK INTELLIGENCE PLATFORM — ENTERPRISE GRADE
+              ENTERPRISE NETWORK INTELLIGENCE
             </div>
             
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-black mb-6 leading-none tracking-tight">
-              <span className="bg-gradient-to-b from-white via-white to-gray-400 bg-clip-text text-transparent">
-                Advanced IP
-              </span>
+              <span className="text-white">Advanced IP</span>
               <br />
               <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
                 Tracking System
               </span>
             </h1>
             
-            <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-12 leading-relaxed font-light">
-              Enterprise-grade network intelligence with real-time geolocation, 
-              ISP mapping, and comprehensive analytics dashboard.
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-12 leading-relaxed">
+              Real-time geolocation, ISP intelligence, and comprehensive network analytics 
+              powered by enterprise-grade infrastructure.
             </p>
 
-            {/* Stats */}
-            <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8">
-              <StatsBadge icon="🌍" label="Coverage" value="195+ Countries" color="cyan" />
-              <div className="w-px h-8 bg-gradient-to-b from-transparent via-gray-800 to-transparent hidden sm:block" />
-              <StatsBadge icon="⚡" label="Uptime" value="99.99% SLA" color="green" />
-              <div className="w-px h-8 bg-gradient-to-b from-transparent via-gray-800 to-transparent hidden sm:block" />
-              <StatsBadge icon="🔒" label="Security" value="256-bit SSL" color="purple" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
+              <StatCard icon={<Icons.Globe />} value="195+" label="Countries" />
+              <StatCard icon={<Icons.Zap />} value="99.99%" label="Uptime SLA" />
+              <StatCard icon={<Icons.Shield />} value="256-bit" label="SSL Security" />
             </div>
           </div>
 
-          {/* ==================== TRACE CARDS GRID ==================== */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-10">
+          {/* ==================== TRACE CARDS ==================== */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-12">
             
-            {/* ==================== CARD 1: TRACE CUSTOM IP ==================== */}
+            {/* Trace Custom IP */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-              <div className="relative bg-gradient-to-br from-[#0b0f1a] to-[#080c15] border border-white/[0.06] rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/50 hover:border-cyan-500/15 transition-all duration-700">
-                {/* Card Header */}
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/3 to-blue-500/3 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="relative bg-[#0a0e18] border border-white/[0.05] rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/50 hover:border-cyan-500/12 transition-all duration-700">
                 <div className="flex items-center gap-4 mb-7">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/10 group-hover:scale-105 transition-transform duration-500">
-                    <svg className="w-6 h-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/15 flex items-center justify-center shadow-lg shadow-cyan-500/5">
+                    <Icons.Search />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-white tracking-tight">Trace IP Address</h2>
-                    <p className="text-xs text-gray-600 mt-0.5">Custom target investigation</p>
+                    <h2 className="text-lg font-bold text-white">Trace IP Address</h2>
+                    <p className="text-xs text-gray-600 mt-0.5">Investigate specific target</p>
                   </div>
                   {activeTrace === 'custom' && traceData && (
-                    <span className="ml-auto px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-[10px] text-green-400 font-mono uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-1 h-1 rounded-full bg-green-400" />
+                    <span className="ml-auto px-3 py-1 bg-emerald-500/8 border border-emerald-500/20 rounded-full text-[10px] text-emerald-400 font-medium uppercase tracking-wider">
                       Active
                     </span>
                   )}
                 </div>
 
-                {/* Input Fields */}
                 <div className="space-y-5">
                   <div>
-                    <label className="flex items-center gap-2 text-[11px] font-medium text-gray-500 mb-2.5 uppercase tracking-[0.15em]">
-                      <span className="w-1 h-1 rounded-full bg-cyan-400 shadow-lg shadow-cyan-400/50" />
+                    <label className="block text-xs font-medium text-gray-500 mb-2.5 uppercase tracking-wider">
                       Target IP / Domain
                     </label>
-                    <div className="relative group/input">
-                      <input
-                        type="text"
-                        value={ip}
-                        onChange={(e) => setIp(e.target.value)}
-                        placeholder="192.168.1.1 or example.com"
-                        className="w-full bg-[#060910] border border-white/[0.06] rounded-2xl py-4 pl-5 pr-14 text-white placeholder-gray-700 focus:outline-none focus:border-cyan-500/30 focus:ring-4 focus:ring-cyan-500/5 transition-all duration-500 font-mono text-sm group-hover/input:border-white/[0.1]"
-                      />
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                        <svg className="w-5 h-5 text-gray-700 group-hover/input:text-cyan-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                    </div>
+                    <input
+                      type="text"
+                      value={ip}
+                      onChange={(e) => setIp(e.target.value)}
+                      placeholder="192.168.1.1 or example.com"
+                      className="w-full bg-[#050810] border border-white/[0.05] rounded-2xl py-4 px-5 text-white placeholder-gray-700 focus:outline-none focus:border-cyan-500/25 focus:ring-4 focus:ring-cyan-500/5 transition-all duration-500 font-mono text-sm"
+                    />
                   </div>
                   
                   <div>
-                    <label className="flex items-center gap-2 text-[11px] font-medium text-gray-500 mb-2.5 uppercase tracking-[0.15em]">
-                      <span className="w-1 h-1 rounded-full bg-yellow-400 shadow-lg shadow-yellow-400/50" />
+                    <label className="block text-xs font-medium text-gray-500 mb-2.5 uppercase tracking-wider">
                       API Key
                     </label>
-                    <div className="relative group/input">
-                      <input
-                        type="password"
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="••••••••••••••••"
-                        className="w-full bg-[#060910] border border-white/[0.06] rounded-2xl py-4 pl-5 pr-14 text-white placeholder-gray-700 focus:outline-none focus:border-yellow-500/30 focus:ring-4 focus:ring-yellow-500/5 transition-all duration-500 font-mono text-sm group-hover/input:border-white/[0.1]"
-                      />
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                        <svg className="w-5 h-5 text-gray-700 group-hover/input:text-yellow-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                        </svg>
-                      </div>
-                    </div>
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="Enter your API key"
+                      className="w-full bg-[#050810] border border-white/[0.05] rounded-2xl py-4 px-5 text-white placeholder-gray-700 focus:outline-none focus:border-yellow-500/25 focus:ring-4 focus:ring-yellow-500/5 transition-all duration-500 font-mono text-sm"
+                    />
                   </div>
 
-                  <GlowButton 
-                    onClick={handleTrace} 
-                    variant="cyan" 
-                    loading={isLoading && activeTrace === 'custom'}
-                    icon={
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    }
-                  >
+                  <GlowButton onClick={handleTrace} variant="cyan" loading={isLoading && activeTrace === 'custom'} icon={<Icons.Search />}>
                     Execute Trace
                   </GlowButton>
                 </div>
               </div>
             </div>
 
-            {/* ==================== CARD 2: TRACE MY NETWORK ==================== */}
+            {/* Trace My Network */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-violet-500/5 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-              <div className="relative bg-gradient-to-br from-[#0b0f1a] to-[#080c15] border border-white/[0.06] rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/50 hover:border-purple-500/15 transition-all duration-700">
-                {/* Card Header */}
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/3 to-violet-500/3 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="relative bg-[#0a0e18] border border-white/[0.05] rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/50 hover:border-purple-500/12 transition-all duration-700">
                 <div className="flex items-center gap-4 mb-7">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/10 to-violet-600/10 border border-purple-500/20 flex items-center justify-center shadow-lg shadow-purple-500/10 group-hover:scale-105 transition-transform duration-500">
-                    <svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
-                    </svg>
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500/10 to-violet-600/10 border border-purple-500/15 flex items-center justify-center shadow-lg shadow-purple-500/5">
+                    <Icons.Network />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-white tracking-tight">Trace My Network</h2>
+                    <h2 className="text-lg font-bold text-white">Trace My Network</h2>
                     <p className="text-xs text-gray-600 mt-0.5">Auto-detect your connection</p>
                   </div>
                   {activeTrace === 'me' && traceData && (
-                    <span className="ml-auto px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-[10px] text-purple-400 font-mono uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-1 h-1 rounded-full bg-purple-400" />
+                    <span className="ml-auto px-3 py-1 bg-purple-500/8 border border-purple-500/20 rounded-full text-[10px] text-purple-400 font-medium uppercase tracking-wider">
                       Active
                     </span>
                   )}
                 </div>
 
-                {/* Feature List */}
-                <div className="space-y-2.5 mb-6">
-                  {[
-                    'Automatic IP Detection',
-                    'ISP & Network Analysis',
-                    'Geolocation Coordinates',
-                    'Timezone & AS Number',
-                  ].map((feature, i) => (
-                    <div key={i} className="flex items-center gap-3 text-sm text-gray-500 group/item hover:text-gray-300 transition-colors duration-300">
-                      <svg className="w-4 h-4 text-purple-500/50 flex-shrink-0 group-hover/item:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                <div className="space-y-3 mb-6">
+                  {['Automatic IP Detection', 'ISP & Network Analysis', 'Geolocation Coordinates'].map((feature, i) => (
+                    <div key={i} className="flex items-center gap-3 text-sm text-gray-500">
+                      <Icons.Check />
                       {feature}
                     </div>
                   ))}
@@ -874,36 +883,19 @@ $ Maps: ${mapsUrl}
 
                 <div className="space-y-5">
                   <div>
-                    <label className="flex items-center gap-2 text-[11px] font-medium text-gray-500 mb-2.5 uppercase tracking-[0.15em]">
-                      <span className="w-1 h-1 rounded-full bg-yellow-400 shadow-lg shadow-yellow-400/50" />
+                    <label className="block text-xs font-medium text-gray-500 mb-2.5 uppercase tracking-wider">
                       API Key
                     </label>
-                    <div className="relative group/input">
-                      <input
-                        type="password"
-                        value={apiKeyMe}
-                        onChange={(e) => setApiKeyMe(e.target.value)}
-                        placeholder="••••••••••••••••"
-                        className="w-full bg-[#060910] border border-white/[0.06] rounded-2xl py-4 pl-5 pr-14 text-white placeholder-gray-700 focus:outline-none focus:border-purple-500/30 focus:ring-4 focus:ring-purple-500/5 transition-all duration-500 font-mono text-sm group-hover/input:border-white/[0.1]"
-                      />
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                        <svg className="w-5 h-5 text-gray-700 group-hover/input:text-purple-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                        </svg>
-                      </div>
-                    </div>
+                    <input
+                      type="password"
+                      value={apiKeyMe}
+                      onChange={(e) => setApiKeyMe(e.target.value)}
+                      placeholder="Enter your API key"
+                      className="w-full bg-[#050810] border border-white/[0.05] rounded-2xl py-4 px-5 text-white placeholder-gray-700 focus:outline-none focus:border-purple-500/25 focus:ring-4 focus:ring-purple-500/5 transition-all duration-500 font-mono text-sm"
+                    />
                   </div>
 
-                  <GlowButton 
-                    onClick={handleTraceMe} 
-                    variant="purple" 
-                    loading={isLoading && activeTrace === 'me'}
-                    icon={
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    }
-                  >
+                  <GlowButton onClick={handleTraceMe} variant="purple" loading={isLoading && activeTrace === 'me'} icon={<Icons.Zap />}>
                     Trace My Network
                   </GlowButton>
                 </div>
@@ -913,134 +905,221 @@ $ Maps: ${mapsUrl}
 
           {/* ==================== OUTPUT SECTION ==================== */}
           {(traceData || isLoading || isError) && (
-            <div className="mb-12 animate-fadeIn">
-              {/* Output Header dengan Toggle */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
+            <div className="mb-16 animate-fadeIn">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-white tracking-tight">Output Result</h3>
+                  <h3 className="text-lg font-bold text-white">Output</h3>
                   {traceData && (
-                    <span className="px-2.5 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full text-[10px] text-green-400 font-mono">
-                      {activeTrace === 'custom' ? 'CUSTOM TRACE' : 'NETWORK TRACE'}
+                    <span className="px-2.5 py-0.5 bg-emerald-500/8 border border-emerald-500/15 rounded-full text-[10px] text-emerald-400 font-mono uppercase">
+                      {activeTrace === 'custom' ? 'Custom Trace' : 'Network Trace'}
                     </span>
                   )}
                 </div>
                 
-                {/* Toggle Switch */}
-                <div className="flex items-center gap-2 bg-[#0a0e17] border border-white/[0.06] rounded-2xl p-1.5">
+                <div className="flex items-center gap-1.5 bg-[#0a0e18] border border-white/[0.04] rounded-2xl p-1.5">
                   <button
                     onClick={() => setOutputMode('dashboard')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                       outputMode === 'dashboard'
-                        ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-400 shadow-lg shadow-cyan-500/5'
+                        ? 'bg-cyan-500/10 text-cyan-400'
                         : 'text-gray-600 hover:text-gray-400'
                     }`}
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
+                    <Icons.Search />
                     Dashboard
                   </button>
                   <button
                     onClick={() => setOutputMode('terminal')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                       outputMode === 'terminal'
-                        ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 shadow-lg shadow-green-500/5'
+                        ? 'bg-emerald-500/10 text-emerald-400'
                         : 'text-gray-600 hover:text-gray-400'
                     }`}
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                    <Icons.Terminal />
                     Terminal
                   </button>
                 </div>
               </div>
 
-              {/* Output Content */}
               {outputMode === 'dashboard' ? (
                 <DashboardOutput data={traceData} isLoading={isLoading} />
               ) : (
-                <TerminalOutput 
-                  output={output} 
-                  isLoading={isLoading} 
-                  isError={isError} 
-                  data={traceData} 
-                />
+                <TerminalOutput output={output} isLoading={isLoading} isError={isError} data={traceData} />
               )}
             </div>
           )}
 
-          {/* ==================== API DOCUMENTATION ==================== */}
-          <div id="docs" className="mt-20 scroll-mt-24">
-            <div className="text-center mb-10">
-              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight">
+          {/* ==================== DOCUMENTATION ==================== */}
+          <div id="docs" className="scroll-mt-28 mb-20">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl sm:text-4xl font-black text-white mb-4 tracking-tight">
                 API Documentation
-              </h3>
-              <p className="text-gray-500 text-sm max-w-xl mx-auto">
-                Simple REST API endpoints for IP tracking and network intelligence.
+              </h2>
+              <p className="text-gray-500 max-w-xl mx-auto">
+                Simple and powerful REST API endpoints for IP intelligence.
               </p>
             </div>
-            
-            <div className="overflow-x-auto bg-gradient-to-br from-[#0b0f1a] to-[#080c15] border border-white/[0.06] rounded-2xl shadow-2xl shadow-black/50">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-white/[0.06]">
-                    <th className="px-6 py-5 text-xs font-medium text-gray-400 uppercase tracking-[0.15em]">Endpoint</th>
-                    <th className="px-6 py-5 text-xs font-medium text-gray-400 uppercase tracking-[0.15em]">Method</th>
-                    <th className="px-6 py-5 text-xs font-medium text-gray-400 uppercase tracking-[0.15em]">Parameters</th>
-                    <th className="px-6 py-5 text-xs font-medium text-gray-400 uppercase tracking-[0.15em]">Description</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.04]">
-                  <tr className="group/row hover:bg-white/[0.02] transition-colors duration-300">
-                    <td className="px-6 py-5">
-                      <code className="text-sm font-mono text-cyan-400 bg-cyan-500/5 px-3 py-1.5 rounded-lg border border-cyan-500/10">
-                        /api/trace
-                      </code>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-xs font-mono text-green-400 bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/10">
-                        GET
-                      </span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex flex-wrap gap-2">
-                        <code className="text-xs font-mono text-yellow-400 bg-yellow-500/5 px-2 py-1 rounded-lg">ip</code>
-                        <code className="text-xs font-mono text-yellow-400 bg-yellow-500/5 px-2 py-1 rounded-lg">apikey</code>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-sm text-gray-400">
-                      Trace specific IP address for geolocation, ISP, and network data.
-                    </td>
-                  </tr>
-                  <tr className="group/row hover:bg-white/[0.02] transition-colors duration-300">
-                    <td className="px-6 py-5">
-                      <code className="text-sm font-mono text-purple-400 bg-purple-500/5 px-3 py-1.5 rounded-lg border border-purple-500/10">
-                        /api/trace-me
-                      </code>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="text-xs font-mono text-green-400 bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/10">
-                        GET
-                      </span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex flex-wrap gap-2">
-                        <code className="text-xs font-mono text-yellow-400 bg-yellow-500/5 px-2 py-1 rounded-lg">apikey</code>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-sm text-gray-400">
-                      Automatically detect and trace your own network connection.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+
+            {/* Endpoints Table */}
+            <div className="bg-[#0a0e18] border border-white/[0.05] rounded-3xl overflow-hidden shadow-2xl shadow-black/50 mb-8">
+              <div className="px-6 py-5 border-b border-white/[0.04]">
+                <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Available Endpoints</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/[0.03]">
+                      <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                      <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Endpoint</th>
+                      <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Parameters</th>
+                      <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.03]">
+                    <tr className="group/row hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-5">
+                        <span className="inline-flex px-3 py-1 bg-emerald-500/8 border border-emerald-500/20 rounded-lg text-xs font-mono text-emerald-400 font-medium">GET</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <code className="text-sm font-mono text-cyan-400 bg-cyan-500/5 px-3 py-1.5 rounded-lg border border-cyan-500/10">/api/trace</code>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-wrap gap-1.5">
+                          <code className="text-xs font-mono text-yellow-400 bg-yellow-500/5 px-2 py-1 rounded-lg border border-yellow-500/10">ip</code>
+                          <code className="text-xs font-mono text-yellow-400 bg-yellow-500/5 px-2 py-1 rounded-lg border border-yellow-500/10">apikey</code>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-sm text-gray-500">Trace specific IP for geolocation data</td>
+                      <td className="px-6 py-5">
+                        <CopyButton text="/api/trace?ip=8.8.8.8&apikey=Fyxzpedia" label="Copy URL" />
+                      </td>
+                    </tr>
+                    <tr className="group/row hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-5">
+                        <span className="inline-flex px-3 py-1 bg-emerald-500/8 border border-emerald-500/20 rounded-lg text-xs font-mono text-emerald-400 font-medium">GET</span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <code className="text-sm font-mono text-purple-400 bg-purple-500/5 px-3 py-1.5 rounded-lg border border-purple-500/10">/api/trace-me</code>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-wrap gap-1.5">
+                          <code className="text-xs font-mono text-yellow-400 bg-yellow-500/5 px-2 py-1 rounded-lg border border-yellow-500/10">apikey</code>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-sm text-gray-500">Auto-detect and trace your network</td>
+                      <td className="px-6 py-5">
+                        <CopyButton text="/api/trace-me?apikey=Fyxzpedia" label="Copy URL" />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            
-            <div className="mt-6 text-center">
-              <p className="text-xs text-gray-600">
-                Default API Key: <code className="text-yellow-400 bg-yellow-500/5 px-2 py-1 rounded-md font-mono">Fyxzpedia</code>
+
+            {/* API Key Info */}
+            <div className="bg-[#0a0e18] border border-yellow-500/10 rounded-2xl p-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/8 border border-yellow-500/15 flex items-center justify-center">
+                  <Icons.Key />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-yellow-400">Default API Key</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Use this key for all API requests</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <code className="text-sm font-mono text-yellow-400 bg-yellow-500/5 px-4 py-2 rounded-xl border border-yellow-500/15">Fyxzpedia</code>
+                <CopyButton text="Fyxzpedia" />
+              </div>
+            </div>
+          </div>
+
+          {/* ==================== TUTORIAL ==================== */}
+          <div id="tutorial" className="scroll-mt-28 mb-20">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl sm:text-4xl font-black text-white mb-4 tracking-tight">
+                Quick Start Tutorial
+              </h2>
+              <p className="text-gray-500 max-w-xl mx-auto">
+                Get started with IP-Tracer API in minutes.
               </p>
+            </div>
+
+            <div className="space-y-12">
+              <TutorialStep
+                number={1}
+                title="Trace a Specific IP Address"
+                description="Send a GET request to the trace endpoint with the target IP and your API key. The API will return comprehensive geolocation data including city, region, country, coordinates, timezone, ISP, and AS number."
+                curlExample={`curl -X GET "https://your-domain.vercel.app/api/trace?ip=8.8.8.8&apikey=Fyxzpedia"`}
+                code={`// JavaScript Fetch Example
+const response = await fetch(
+  '/api/trace?ip=8.8.8.8&apikey=Fyxzpedia'
+);
+const data = await response.json();
+
+console.log(data);
+// {
+//   "status": true,
+//   "ip": "8.8.8.8",
+//   "city": "Mountain View",
+//   "region": "California",
+//   "country": "United States",
+//   "lat": 37.4056,
+//   "lon": -122.0775,
+//   "timezone": "America/Los_Angeles",
+//   "isp": "Google LLC",
+//   "as": "AS15169 Google LLC"
+// }`}
+              />
+
+              <TutorialStep
+                number={2}
+                title="Trace Your Own Network"
+                description="Use the trace-me endpoint to automatically detect and trace your current network connection. No need to know your IP address — the API detects it from request headers."
+                curlExample={`curl -X GET "https://your-domain.vercel.app/api/trace-me?apikey=Fyxzpedia"`}
+                code={`// JavaScript Fetch Example
+const response = await fetch(
+  '/api/trace-me?apikey=Fyxzpedia'
+);
+const data = await response.json();
+
+console.log(\`Your IP: \${data.ip}\`);
+console.log(\`Location: \${data.city}, \${data.country}\`);
+console.log(\`ISP: \${data.isp}\`);`}
+              />
+
+              <TutorialStep
+                number={3}
+                title="Error Handling"
+                description="The API returns clear error messages with appropriate HTTP status codes. Always check the status field and handle errors gracefully in your application."
+                curlExample={`# Invalid API Key
+curl -X GET "https://your-domain.vercel.app/api/trace?ip=8.8.8.8&apikey=wrong"
+
+# Response: 401 Unauthorized
+# {"status": false, "message": "Invalid API Key"}`}
+                code={`// Error Handling Example
+try {
+  const response = await fetch(
+    '/api/trace?ip=8.8.8.8&apikey=Fyxzpedia'
+  );
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message);
+  }
+  
+  const data = await response.json();
+  
+  if (data.status) {
+    // Success - use data
+    displayResult(data);
+  }
+} catch (error) {
+  console.error('Trace failed:', error.message);
+}`}
+              />
             </div>
           </div>
 
@@ -1048,42 +1127,38 @@ $ Maps: ${mapsUrl}
       </main>
 
       {/* ==================== FOOTER ==================== */}
-      <footer className="relative z-10 border-t border-white/[0.04] mt-20">
+      <footer className="relative z-10 border-t border-white/[0.04]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>© {new Date().getFullYear()}</span>
-              <span className="text-cyan-500">IP-Tracer Pro</span>
-              <span className="hidden sm:inline">•</span>
-              <span className="hidden sm:inline">All rights reserved.</span>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <span>&copy; {new Date().getFullYear()}</span>
+              <span className="text-cyan-500 font-medium">IP-Tracer Pro</span>
             </div>
-            <div className="flex items-center gap-4 text-xs text-gray-700">
+            <div className="flex items-center gap-4 text-xs">
               <span>Privacy Policy</span>
-              <span>•</span>
+              <span className="w-1 h-1 rounded-full bg-gray-800" />
               <span>Terms of Service</span>
-              <span>•</span>
-              <span>Built with Next.js & Tailwind</span>
+              <span className="w-1 h-1 rounded-full bg-gray-800" />
+              <span>Built with Next.js</span>
             </div>
           </div>
         </div>
       </footer>
 
-      {/* Custom Animations */}
       <style jsx global>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
         }
         .animate-fadeIn {
-          animation: fadeIn 0.5s ease-out forwards;
+          animation: fadeIn 0.4s ease-out forwards;
         }
         
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: #0a0a0a;
-          border-radius: 3px;
+          background: #050508;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: #1f2937;
@@ -1093,10 +1168,9 @@ $ Maps: ${mapsUrl}
           background: #374151;
         }
         
-        .delay-75 { animation-delay: 75ms; }
-        .delay-100 { animation-delay: 100ms; }
-        .delay-150 { animation-delay: 150ms; }
-        .delay-200 { animation-delay: 200ms; }
+        .animation-delay-500 {
+          animation-delay: 500ms;
+        }
       `}</style>
     </div>
   );
